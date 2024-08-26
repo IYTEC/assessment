@@ -45,7 +45,7 @@ const TodoPage = () => {
       const todoSnapshot = await getDocs(todosCollection);
       const todoList = todoSnapshot.docs.map((doc) => doc);
       console.log(todoList, 'todo list')
-      setTodos(todoList);
+      // setTodos(todoList);
     };
 
     fetchTodos();
@@ -92,10 +92,10 @@ const TodoPage = () => {
     }
   };
 
-  const handleUpdateTodo = async (id: string, newText: string) => {
+  const handleUpdateTodo = async (id: string, newTodo: Todo) => {
     try {
-      await updateDoc(doc(db, "todos", id), { text: newText });
-      setTodos(todos.map((todo) => (todo.id === id ? { ...todo, text: newText } : todo)));
+      // await updateDoc(doc(db, "todos", id), newTodo);
+      // setTodos(todos.map((todo) => (todo.id === id ? [ ...todo, newTodo ] : todo)));
     } catch (error) {
       console.error("Error updating todo:", error);
     }
