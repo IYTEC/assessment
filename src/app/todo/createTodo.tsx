@@ -1,9 +1,4 @@
-import React, { useState } from 'react';
-
-interface TodoFormProps {
-  // onSubmit: (todo: Todo) => void;
-  handleAddTodo: (data: Todo) => void
-}
+import React, { useEffect, useState } from 'react';
 
 interface Todo {
   id?: string;
@@ -12,23 +7,35 @@ interface Todo {
   status: 'High' | 'Medium' | 'Low';
 }
 
-const TodoForm: React.FC<TodoFormProps> = ({ handleAddTodo = () => { } }) => {
+interface TodoFormProps {
+  onSubmit: (data: Todo) => void
+  activeTodo: Todo
+}
+
+
+const TodoForm: React.FC<TodoFormProps> = ({ activeTodo = null, onSubmit = () => { } }) => {
   const [title, setTitle] = useState<string>('');
   const [date, setDate] = useState<string>('');
   const [status, setStatus] = useState<'High' | 'Medium' | 'Low'>('High');
 
+  useEffect(() => {
+    if (activeTodo) {
+      setTitle(activeTodo.title)
+      setDate(activeTodo.date)
+      setStatus(activeTodo.status)
+    }
+  }, [activeTodo])
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const newTodo: Todo = { title, date, status };
-    await handleAddTodo(newTodo)
-    // Add form submission logic here, like sending data to an API or updating state
-    console.log(newTodo);
+    await onSubmit(newTodo)
   };
 
   return (
     <div className="">
       <div className="bg-white w-full">
-        <h1 className="text-2xl font-bold mb-6 text-center">Add To-Do Item</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center">{activeTodo ? 'Update To-do' : 'Add To-Do Item'}</h1>
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
@@ -82,7 +89,7 @@ const TodoForm: React.FC<TodoFormProps> = ({ handleAddTodo = () => { } }) => {
               // type="submit"
               className="bg-pink-500 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:shadow-outline"
             >
-              Add To-Do
+              {activeTodo ? 'Updating  Todo' : 'Add To-Do'}
             </button>
           </div>
         </form>

@@ -1,9 +1,9 @@
 "use client"
 import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
-import { auth } from "../../lib/firebaseConfig";
+import { auth, db } from "../../lib/firebaseConfig";
 import { signOut } from "firebase/auth";
 import { groupBy, sortBy } from "lodash";
 import dayjs from "dayjs";
@@ -24,32 +24,36 @@ interface DataListProps {
 
 
 const TodoPage = () => {
-  const { user } = useAuth();
-  // const router = useRouter();
-  const [isAddingTodo, setIsAddingTodo] = useState<boolean>(false)
-  const [todos, setTodos] = useState<Todo[]>([
-    { id: '1', title: "Buy groceries", date: new Date(), status: "High" },
-    { id: '2', title: "Pay bills", date: new Date(), status: "Medium" },
-  ]);
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [showTodoForm, setShowTodoForm] = useState<boolean>(false)
+  const [isUpdating, setIsUpdating] = useState<boolean>(false)
+  const [activeTodo, setActiveTodo] = useState<Todo | null>(null)
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState<Todo>();
-  const db = getFirestore();
 
   useEffect(() => {
+    if (loading) {
+      return;
+    }
     if (!user) {
-      // router.push("/login");
+      router.push("/login");
       return;
     }
 
     const fetchTodos = async () => {
       const todosCollection = collection(db, "todos");
       const todoSnapshot = await getDocs(todosCollection);
-      const todoList = todoSnapshot.docs.map((doc) => doc);
-      console.log(todoList, 'todo list')
-      // setTodos(todoList);
+      const todoList = todoSnapshot.docs.map((doc) => {
+        const data = doc.data()
+        data.id = doc.id
+        return data
+      });
+      setTodos(todoList);
     };
 
     fetchTodos();
-  }, [user]);
+  }, [user, loading]);
 
   const handleLogout = async () => {
     // const { user } = useAuth();
@@ -58,7 +62,7 @@ const TodoPage = () => {
         // Sign-out successful.
         console.log("User signed out.");
         // Optionally redirect to the login page or show a message
-        window.location.href = "/login"; // Example redirect to a login page
+        window.location.href = "/login";
       })
       .catch((error) => {
         // An error happened.
@@ -67,17 +71,19 @@ const TodoPage = () => {
   }
 
   const handleAddTodo = async (newTodo: Todo) => {
+
     const { title, status, date } = newTodo
     if (title.trim() === "") return;
 
     try {
       const docRef = await addDoc(collection(db, "todos"), {
-        title, 
-        status, 
+        title,
+        status,
         date
       });
       setTodos([...todos, { id: docRef.id, title, status, date }]);
       setNewTodo(newTodo);
+      setShowTodoForm(!showTodoForm)
     } catch (error) {
       console.error("Error adding todo:", error);
     }
@@ -92,10 +98,14 @@ const TodoPage = () => {
     }
   };
 
-  const handleUpdateTodo = async (id: string, newTodo: Todo) => {
+  const handleUpdateTodo = async (newTodo: Todo) => {
+    const id = activeTodo?.id
     try {
-      // await updateDoc(doc(db, "todos", id), newTodo);
-      // setTodos(todos.map((todo) => (todo.id === id ? [ ...todo, newTodo ] : todo)));
+      await updateDoc(doc(db, "todos", id), newTodo);
+      setActiveTodo(null)
+      setShowTodoForm(!showTodoForm)
+      setIsUpdating(false)
+      setTodos(todos.map((todo) => (todo.id === id ? { ...todo, ...newTodo } : todo)));
     } catch (error) {
       console.error("Error updating todo:", error);
     }
@@ -113,7 +123,12 @@ const TodoPage = () => {
               </span>
             </div>
             <div className="flex items-center space-x-2">
-              <button onClick={() => handleUpdateTodo(todo.id, '')} className="text-pink-500 hover:text-pink-700">
+              {/* <button onClick={() => handleUpdateTodo(todo.id, '')} className="text-pink-500 hover:text-pink-700"> */}
+              <button onClick={() => {
+                setShowTodoForm(!showTodoForm)
+                setIsUpdating(true)
+                setActiveTodo(todo)
+              }} className="text-pink-500 hover:text-pink-700">
                 <img src="/edit_icon.svg" alt="Edit" className="w-5 h-5" />
               </button>
               <button onClick={() => handleDeleteTodo(todo.id)} className="text-pink-500 hover:text-pink-700">
@@ -127,7 +142,6 @@ const TodoPage = () => {
   }
   const renderTodoList = () => {
     const formattedList = groupBy(todos, (todo: Todo) => todo.date);
-    console.log(formattedList, 'formatted list')
     return Object.keys(formattedList).map((key) => {
       return (<>
         <h3 className="text-pink-500 font-medium mb-2">{dayjs(key).format('dddd, D MMMM')}</h3>
@@ -143,7 +157,7 @@ const TodoPage = () => {
       <div className="bg-white p-6 relative w-full mx-3 md:w-1/2 lg:w-1/3 my-10 rounded-3xl box-styling">
         <div>
           <h1 className="text-3xl font-semibold mb-8 mt-8">To Do List</h1>
-          {isAddingTodo ? <CreateTodo handleAddTodo={handleAddTodo} /> : <div>
+          {showTodoForm ? <CreateTodo activeTodo={activeTodo} onSubmit={isUpdating ? handleUpdateTodo : handleAddTodo} /> : <div>
             <h2 className="text-lg font-semibold mb-4 mt-4">This Week</h2>
             <div className="my-6">
               {renderTodoList()}
@@ -152,7 +166,7 @@ const TodoPage = () => {
           }
         </div>
         <button
-          onClick={()  => setIsAddingTodo(!isAddingTodo)}
+          onClick={() => setShowTodoForm(!showTodoForm)}
           className="bg-pink-500 text-white rounded-full p-4 shadow-lg absolute bottom-6 right-6"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-6 h-6">

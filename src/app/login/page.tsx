@@ -1,21 +1,61 @@
 "use client"
-import { useState } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider } from 'firebase/auth';
 import { auth } from '../../lib/firebaseConfig';
 import { useRouter } from 'next/navigation';
+import RenderNotificationPopup from '../../components/Notification';
+import { NotificationContext } from '../../contexts/NotificationProvider';
+import Link from 'next/link';
+import { useAuth } from "../../contexts/AuthContext";
+
 
 export default function LoginPage() {
+  const { user, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
+  const { state: notification, dispatch: setNotificationProp } = useContext(NotificationContext)
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+    if (user) {
+      router.push("/todo");
+      return;
+    }
+  }, [loading, user])
+
+  const handleNotification = (message:string, status:boolean, type:string) => {
+    setNotificationProp({
+      type: 'UPDATE_MESSAGE',
+      payload: { message, status, type }
+    })
+  }
+
+  const handleLoginError = (error: any) => {
+    switch (error.code) {
+      case 'auth/too-many-requests':
+        handleNotification(error.message, true, 'error')
+        break;    
+      case 'auth/invalid-credential':
+        handleNotification(error.message, true, 'error')
+        break;    
+      case 'auth/popup-closed-by-user':
+        handleNotification(error.message, true, 'error')
+        break;    
+      default:
+        break;
+    }
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push('/todo');
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      handleLoginError(error)
     }
   };
 
@@ -24,8 +64,9 @@ export default function LoginPage() {
     try {
       await signInWithPopup(auth, provider);
       router.push('/todo');
-    } catch (error) {
-      console.error(error);
+    } catch (error:any) {
+      console.log(error.code);
+      handleLoginError(error)
     }
   };
 
@@ -34,8 +75,9 @@ export default function LoginPage() {
     try {
       await signInWithPopup(auth, provider);
       router.push('/todo');
-    } catch (error) {
-      console.error(error);
+    } catch (error:any) {
+      console.log(error.code);
+      handleLoginError(error)
     }
   };
 
@@ -51,6 +93,7 @@ export default function LoginPage() {
                 Sign in to start managing your projects.
               </h5>
               <form onSubmit={handleLogin} className="space-y-4">
+                {notification?.status && <RenderNotificationPopup />}
                 <div className='mt-5'>
                   <label className='text-[#0C1421] text-sm mb-4'>Email</label>
                   <input
@@ -80,6 +123,9 @@ export default function LoginPage() {
                 <button type="submit" className="w-full h-12 bg-[#162D3A] font-medium text-sm text-white px-3 py-2 rounded-md">
                   Sign in
                 </button>
+                <div className='text-center'>
+                  <Link className='underline' href="/signup">Don't have an account, Signup</Link>
+                </div>
               </form>
               <div className="flex items-center justify-center my-4">
                 <div className="border-t border-gray-300 flex-grow mr-3"></div>

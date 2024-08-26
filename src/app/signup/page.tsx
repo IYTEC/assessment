@@ -1,9 +1,12 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider } from 'firebase/auth';
 import { auth } from '../../lib/firebaseConfig';
 import { useRouter } from 'next/navigation';
+import RenderNotificationPopup from '../../components/Notification';
+import { NotificationContext } from '../../contexts/NotificationProvider';
+import Link from 'next/link';
 
 export default function SignupPage() {
   const [name, setName] = useState('');
@@ -11,11 +14,36 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const router = useRouter();
+  const { state: notification, dispatch: setNotificationProp } = useContext(NotificationContext)
+
+
+  const handleNotification = (message:string, status:boolean, type:string) => {
+    setNotificationProp({
+      type: 'UPDATE_MESSAGE',
+      payload: { message, status, type }
+    })
+  }
+
+  const handleSignupError = (error: any) => {
+    switch (error.code) {
+      case 'auth/email-already-in-use':
+        handleNotification(error.message, true, 'error')
+        break;    
+      case 'auth/invalid-credential':
+        handleNotification(error.message, true, 'error')
+        break;    
+      case 'auth/popup-closed-by-user':
+        handleNotification(error.message, true, 'error')
+        break;    
+      default:
+        break;
+    }
+  }
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert("Passwords don't match");
+      handleNotification("Passwords don't match", true, 'error')
       return;
     }
     try {
@@ -23,6 +51,7 @@ export default function SignupPage() {
       router.push('/todo');
     } catch (error) {
       console.error(error);
+      handleSignupError(error)
     }
   };
 
@@ -33,6 +62,7 @@ export default function SignupPage() {
       router.push('/todo');
     } catch (error) {
       console.error(error);
+      handleSignupError(error)
     }
   };
 
@@ -43,6 +73,7 @@ export default function SignupPage() {
       router.push('/todo');
     } catch (error) {
       console.error(error);
+      handleSignupError(error)
     }
   };
 
@@ -57,6 +88,7 @@ export default function SignupPage() {
                 Today is a new day. It's your day. You shape it. <br />
                 Sign up to get started.
               </h5>
+              {notification?.status && <RenderNotificationPopup />}
               <form onSubmit={handleSignup} className="space-y-4">
                 <div>
                   <label className='text-[#0C1421] text-sm mb-4'>Name</label>
@@ -103,11 +135,13 @@ export default function SignupPage() {
                     required
                   />
                 </div>
-                <p className='text-right font-medium text-[#1e4ae9bd] text-xs'>Forgot Password?</p>
 
                 <button type="submit" className="w-full h-12 bg-[#162D3A] font-medium text-sm text-white px-3 py-2 rounded-md">
                   Sign up
                 </button>
+                <div className='text-center'>
+                  <Link className='underline' href="/login">Already have an account, Login</Link>
+                </div>
               </form>
               <div className="flex items-center justify-center my-2">
                 <div className="border-t border-gray-300 flex-grow mr-1"></div>
