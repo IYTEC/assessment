@@ -46,58 +46,6 @@ export default function SignupPage() {
     }
   };
 
-  // return (
-  //   <div className="flex items-center justify-center min-h-screen bg-gray-100">
-  //     <div className="p-8 bg-white shadow-md rounded-lg">
-  //       <h1 className="text-xl font-semibold mb-4">Signup</h1>
-  //       <form onSubmit={handleSignup} className="space-y-4">
-  //         <input
-  //           type="text"
-  //           value={name}
-  //           onChange={(e) => setName(e.target.value)}
-  //           placeholder="Name"
-  //           className="w-full px-3 py-2 border border-gray-300 rounded"
-  //           required
-  //         />
-  //         <input
-  //           type="email"
-  //           value={email}
-  //           onChange={(e) => setEmail(e.target.value)}
-  //           placeholder="Email"
-  //           className="w-full px-3 py-2 border border-gray-300 rounded"
-  //           required
-  //         />
-  //         <input
-  //           type="password"
-  //           value={password}
-  //           onChange={(e) => setPassword(e.target.value)}
-  //           placeholder="Password"
-  //           className="w-full px-3 py-2 border border-gray-300 rounded"
-  //           required
-  //         />
-  //         <input
-  //           type="password"
-  //           value={confirmPassword}
-  //           onChange={(e) => setConfirmPassword(e.target.value)}
-  //           placeholder="Confirm Password"
-  //           className="w-full px-3 py-2 border border-gray-300 rounded"
-  //           required
-  //         />
-  //         <button type="submit" className="w-full bg-blue-500 text-white px-3 py-2 rounded">
-  //           Signup
-  //         </button>
-  //       </form>
-  //       <div className="mt-4 flex flex-col space-y-2">
-  //         <button onClick={handleGoogleSignIn} className="w-full bg-red-500 text-white px-3 py-2 rounded">
-  //           Signup with Google
-  //         </button>
-  //         <button onClick={handleFacebookSignIn} className="w-full bg-blue-700 text-white px-3 py-2 rounded">
-  //           Signup with Facebook
-  //         </button>
-  //       </div>
-  //     </div>
-  //   </div>
-  // );
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="grid w-4/5 h-[50rem] grid-cols-1 md:grid-cols-2 gap-0 bg-white p-4 rounded-2xl">
