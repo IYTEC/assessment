@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react";
+import { useContext, useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
@@ -8,6 +8,9 @@ import { signOut } from "firebase/auth";
 import { groupBy, sortBy } from "lodash";
 import dayjs from "dayjs";
 import CreateTodo from './createTodo'
+import RenderNotificationPopup from '../../components/Notification';
+import { NotificationContext } from '../../contexts/NotificationProvider';
+import { AiOutlineClose, AiOutlinePlus } from "react-icons/ai";
 
 interface Todo {
   id?: string;
@@ -31,6 +34,7 @@ const TodoPage = () => {
   const [activeTodo, setActiveTodo] = useState<Todo | null>(null)
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState<Todo>();
+  const { state: notification, dispatch: setNotificationProp } = useContext(NotificationContext)
 
   useEffect(() => {
     if (loading) {
@@ -55,6 +59,13 @@ const TodoPage = () => {
     fetchTodos();
   }, [user, loading]);
 
+  const handleNotification = (message: string, status: boolean, type: string) => {
+    setNotificationProp({
+      type: 'UPDATE_MESSAGE',
+      payload: { message, status, type }
+    })
+  }
+
   const handleLogout = async () => {
     // const { user } = useAuth();
     signOut(auth)
@@ -63,15 +74,16 @@ const TodoPage = () => {
         console.log("User signed out.");
         // Optionally redirect to the login page or show a message
         window.location.href = "/login";
+        handleNotification("Signed out", true, 'error')
       })
       .catch((error) => {
         // An error happened.
         console.error("Error signing out: ", error);
+        handleNotification("Error Signing Todo", true, 'error')
       });
   }
 
   const handleAddTodo = async (newTodo: Todo) => {
-
     const { title, status, date } = newTodo
     if (title.trim() === "") return;
 
@@ -84,8 +96,10 @@ const TodoPage = () => {
       setTodos([...todos, { id: docRef.id, title, status, date }]);
       setNewTodo(newTodo);
       setShowTodoForm(!showTodoForm)
+      handleNotification("Added successfully", true, 'success')
     } catch (error) {
       console.error("Error adding todo:", error);
+      handleNotification("Error Adding Todo", true, 'error')
     }
   };
 
@@ -93,8 +107,10 @@ const TodoPage = () => {
     try {
       await deleteDoc(doc(db, "todos", id));
       setTodos(todos.filter((todo) => todo.id !== id));
+      handleNotification("Deleted successfully", true, 'success')
     } catch (error) {
       console.error("Error deleting todo:", error);
+      handleNotification("Error deleting Todo", true, 'error')
     }
   };
 
@@ -106,14 +122,16 @@ const TodoPage = () => {
       setShowTodoForm(!showTodoForm)
       setIsUpdating(false)
       setTodos(todos.map((todo) => (todo.id === id ? { ...todo, ...newTodo } : todo)));
+      handleNotification("Updated successfully", true, 'success')
     } catch (error) {
       console.error("Error updating todo:", error);
+      handleNotification("Error Updating Todo", true, 'error')
     }
   };
 
   const renderTodoItems = (formattedList: Todo[]) => {
-    return formattedList.map((todo: Todo) => {
-      return <div>
+    return formattedList.map((todo: Todo, idx) => {
+      return <div key={idx}>
         <div>
           <div className="p-4 rounded-xl shadow-sm mb-4 flex items-center justify-between box-styling">
             <div>
@@ -142,11 +160,11 @@ const TodoPage = () => {
   }
   const renderTodoList = () => {
     const formattedList = groupBy(todos, (todo: Todo) => todo.date);
-    return Object.keys(formattedList).map((key) => {
-      return (<>
+    return Object.keys(formattedList).map((key, idx) => {
+      return (<div key={idx}>
         <h3 className="text-pink-500 font-medium mb-2">{dayjs(key).format('dddd, D MMMM')}</h3>
         {renderTodoItems(formattedList[key])}
-      </>
+      </div>
       )
     })
   }
@@ -157,6 +175,7 @@ const TodoPage = () => {
       <div className="bg-white p-6 relative w-full mx-3 md:w-1/2 lg:w-1/3 my-10 rounded-3xl box-styling">
         <div>
           <h1 className="text-3xl font-semibold mb-8 mt-8">To Do List</h1>
+          {notification?.status && <RenderNotificationPopup />}
           {showTodoForm ? <CreateTodo activeTodo={activeTodo} onSubmit={isUpdating ? handleUpdateTodo : handleAddTodo} /> : <div>
             <h2 className="text-lg font-semibold mb-4 mt-4">This Week</h2>
             <div className="my-6">
@@ -167,11 +186,9 @@ const TodoPage = () => {
         </div>
         <button
           onClick={() => setShowTodoForm(!showTodoForm)}
-          className="bg-pink-500 text-white rounded-full p-4 shadow-lg absolute bottom-6 right-6"
+          className="bg-pink-500 text-white text-2xl rounded-full p-4 shadow-lg absolute bottom-6 right-6"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-6 h-6">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
+          {showTodoForm ? <AiOutlineClose /> : <AiOutlinePlus />}
         </button>
         <div className="absolute bottom-6 left-7 font-black">
           <button onClick={handleLogout}>Logout</button>
